@@ -6,6 +6,11 @@
  */
 
 #include "minix.h"
+#include <linux/fs.h>
+#include <asm/segment.h>
+#include <asm/uaccess.h>
+#include <linux/buffer_head.h>
+
 
 static int add_nondir(struct dentry *dentry, struct inode *inode)
 {
@@ -23,37 +28,41 @@ static struct dentry *minix_lookup(struct inode * dir, struct dentry *dentry, un
 {
 	struct inode * inode = NULL;
 	ino_t ino;
-
+	
 	if (dentry->d_name.len > minix_sb(dir->i_sb)->s_namelen)
 		return ERR_PTR(-ENAMETOOLONG);
 
 	ino = minix_inode_by_name(dentry);
+
 	if (ino)
 		inode = minix_iget(dir->i_sb, ino);
 	return d_splice_alias(inode, dentry);
 }
 
 static int minix_mknod(struct inode * dir, struct dentry *dentry, umode_t mode, dev_t rdev)
-{
-	int error;
+{	
 	struct inode *inode;
+	int error;	
+	printk("Criado com sucesso\n");
 
 	if (!old_valid_dev(rdev))
 		return -EINVAL;
 
-	inode = minix_new_inode(dir, mode, &error);
+	inode = minix_new_inode(dir, mode, &error);	//cria um novo inode
 
 	if (inode) {
-		minix_set_inode(inode, rdev);
-		mark_inode_dirty(inode);
+		minix_set_inode(inode, rdev);	//seta o novo inode
+		mark_inode_dirty(inode);	//coloca ele no super
 		error = add_nondir(dentry, inode);
 	}
+
 	return error;
 }
 
 static int minix_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
 	int error;
+	
 	struct inode *inode = minix_new_inode(dir, mode, &error);
 	if (inode) {
 		minix_set_inode(inode, 0);
@@ -65,7 +74,7 @@ static int minix_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 
 static int minix_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 		bool excl)
-{
+{	
 	return minix_mknod(dir, dentry, mode, 0);
 }
 
@@ -116,7 +125,6 @@ static int minix_mkdir(struct inode * dir, struct dentry *dentry, umode_t mode)
 
 	inode_inc_link_count(dir);
 
-	printk("Estou criando um arquivo,acho\n\n");
 
 	inode = minix_new_inode(dir, S_IFDIR | mode, &err);
 	if (!inode)
@@ -172,7 +180,6 @@ static int minix_rmdir(struct inode * dir, struct dentry *dentry)
 {
 	struct inode * inode = d_inode(dentry);
 	int err = -ENOTEMPTY;
-	printk("Estou deletando um arquivo,acho\n\n");
 
 	if (minix_empty_dir(inode)) {
 		err = minix_unlink(dir, dentry);
@@ -196,8 +203,6 @@ static int minix_rename(struct inode * old_dir, struct dentry *old_dentry,
 	struct minix_dir_entry * old_de;
 	int err = -ENOENT;
 	
-	printk("Estou renomeando um arquivo,acho\n\n");
-
 	if (flags & ~RENAME_NOREPLACE)
 		return -EINVAL;
 
