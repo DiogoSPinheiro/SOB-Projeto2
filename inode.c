@@ -125,9 +125,9 @@ static int minix_remount (struct super_block * sb, int * flags, char * data)
 
 	sync_filesystem(sb);
 	ms = sbi->s_ms;
-	if ((bool)(*flags & SB_RDONLY) == sb_rdonly(sb))
+	if ((bool)(*flags & MS_RDONLY) == sb_rdonly(sb))
 		return 0;
-	if (*flags & SB_RDONLY) {
+	if (*flags & MS_RDONLY) {
 		if (ms->s_state & MINIX_VALID_FS ||
 		    !(sbi->s_mount_state & MINIX_VALID_FS))
 			return 0;
@@ -280,7 +280,7 @@ static int minix_fill_super(struct super_block *s, void *data, int silent)
 		goto out_no_bitmap;
 	}
 
-	/* set up enough so that it can read an inode */ //Funcao q le e determina oq o inode eh
+	/* set up enough so that it can read an inode */
 	s->s_op = &minix_sops;
 	root_inode = minix_iget(s, MINIX_ROOT_INO);
 	if (IS_ERR(root_inode)) {
@@ -305,11 +305,7 @@ static int minix_fill_super(struct super_block *s, void *data, int silent)
 		printk("MINIX-fs: mounting file system with errors, "
 			"running fsck is recommended\n");
 
-	// o minix trata doq o arquivo vai fazer
-	printk("O que o arquivo quer ?\n");
-
 	return 0;
-
 
 out_no_root:
 	if (!silent)
@@ -415,7 +411,7 @@ static int minix_write_begin(struct file *file, struct address_space *mapping,
 			struct page **pagep, void **fsdata)
 {
 	int ret;
-	printk("Write minix file \n\n");
+
 	ret = block_write_begin(mapping, pos, len, flags, pagep,
 				minix_get_block);
 	if (unlikely(ret))
@@ -444,8 +440,6 @@ static const struct inode_operations minix_symlink_inode_operations = {
 
 void minix_set_inode(struct inode *inode, dev_t rdev)
 {
-	// Pega o conteudo do file.c e seta como "caracteristica do inode"
-	printk("Entrei nas confs do inode\n\n");
 	if (S_ISREG(inode->i_mode)) {
 		inode->i_op = &minix_file_inode_operations;
 		inode->i_fop = &minix_file_operations;
@@ -467,7 +461,6 @@ void minix_set_inode(struct inode *inode, dev_t rdev)
  */
 static struct inode *V1_minix_iget(struct inode *inode)
 {
-	// Nosa versao eh a V1 
 	struct buffer_head * bh;
 	struct minix_inode * raw_inode;
 	struct minix_inode_info *minix_inode = minix_i(inode);
@@ -488,10 +481,8 @@ static struct inode *V1_minix_iget(struct inode *inode)
 	inode->i_atime.tv_nsec = 0;
 	inode->i_ctime.tv_nsec = 0;
 	inode->i_blocks = 0;
-	for (i = 0; i < 9; i++){
+	for (i = 0; i < 9; i++)
 		minix_inode->u.i1_data[i] = raw_inode->i_zone[i];
-	}
-	printk("Data salva %d\n", raw_inode->i_zone[i]);
 	minix_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
 	brelse(bh);
 	unlock_new_inode(inode);
@@ -525,11 +516,9 @@ static struct inode *V2_minix_iget(struct inode *inode)
 	inode->i_atime.tv_nsec = 0;
 	inode->i_ctime.tv_nsec = 0;
 	inode->i_blocks = 0;
-	for (i = 0; i < 10; i++){
+	for (i = 0; i < 10; i++)
 		minix_inode->u.i2_data[i] = raw_inode->i_zone[i];
-	}
 	minix_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
-	printk("%d \n",raw_inode->i_zone[0]);
 	brelse(bh);
 	unlock_new_inode(inode);
 	return inode;
@@ -541,8 +530,6 @@ static struct inode *V2_minix_iget(struct inode *inode)
 struct inode *minix_iget(struct super_block *sb, unsigned long ino)
 {
 	struct inode *inode;
-
-	// Seta qual inode eu quero
 
 	inode = iget_locked(sb, ino);
 	if (!inode)
@@ -561,8 +548,6 @@ struct inode *minix_iget(struct super_block *sb, unsigned long ino)
  */
 static struct buffer_head * V1_minix_update_inode(struct inode * inode)
 {
-	// quando deleta um arquivo 
-
 	struct buffer_head * bh;
 	struct minix_inode * raw_inode;
 	struct minix_inode_info *minix_inode = minix_i(inode);
@@ -579,9 +564,8 @@ static struct buffer_head * V1_minix_update_inode(struct inode * inode)
 	raw_inode->i_time = inode->i_mtime.tv_sec;
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
-	else for (i = 0; i < 9; i++){
+	else for (i = 0; i < 9; i++)
 		raw_inode->i_zone[i] = minix_inode->u.i1_data[i];
-	}
 	mark_buffer_dirty(bh);
 	return bh;
 }
@@ -609,11 +593,9 @@ static struct buffer_head * V2_minix_update_inode(struct inode * inode)
 	raw_inode->i_ctime = inode->i_ctime.tv_sec;
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
-	else for (i = 0; i < 10; i++){
+	else for (i = 0; i < 10; i++)
 		raw_inode->i_zone[i] = minix_inode->u.i2_data[i];
-	}
 	mark_buffer_dirty(bh);
-
 	return bh;
 }
 
@@ -621,7 +603,7 @@ static int minix_write_inode(struct inode *inode, struct writeback_control *wbc)
 {
 	int err = 0;
 	struct buffer_head *bh;
-	printk("Salva inode \n");
+
 	if (INODE_VERSION(inode) == MINIX_V1)
 		bh = V1_minix_update_inode(inode);
 	else
@@ -686,6 +668,7 @@ MODULE_ALIAS_FS("minix");
 static int __init init_minix_fs(void)
 {
 	int err = init_inodecache();
+	printk("Iniciando modulo\n");
 	if (err)
 		goto out1;
 	err = register_filesystem(&minix_fs_type);

@@ -8,6 +8,12 @@
  */
 
 #include "minix.h"
+#include <linux/fs.h>
+#include <linux/uio.h>
+#include <asm/uaccess.h>
+
+static ssize_t read_crypto(struct kiocb *iocb, struct iov_iter *from);
+static ssize_t write_crypto(struct kiocb *iocb, struct iov_iter *iter);
 
 /*
  * We have mostly NULLs here: the current defaults are OK for
@@ -15,12 +21,39 @@
  */
 const struct file_operations minix_file_operations = {
 	.llseek		= generic_file_llseek,
-	.read_iter	= generic_file_read_iter,
-	.write_iter	= generic_file_write_iter,
+	.read_iter	= read_crypto,
+	.write_iter	= write_crypto,
 	.mmap		= generic_file_mmap,
 	.fsync		= generic_file_fsync,
 	.splice_read	= generic_file_splice_read,
 };
+
+static ssize_t read_crypto(struct kiocb *iocb, struct iov_iter *from)
+{
+	int ret,i;
+	char *data = (char *)from->kvec->iov_base;
+	ret = generic_file_read_iter(iocb, from);	
+	
+	for(i =0 ; i< sizeof(data) -1 ; i++){
+		data[i] = data[i] - 1;
+	}
+
+	printk("Estou lendo %s\n",data);
+	return ret;
+}
+
+static ssize_t write_crypto(struct kiocb *iocb, struct iov_iter *iter)
+{
+	int ret,i;
+	char *data = (char *)iter->kvec->iov_base;
+	for(i =0 ; i< sizeof(data) -1 ; i++){
+		data[i] = data[i] + 1;
+	}
+
+	ret = generic_file_write_iter(iocb, iter);
+	printk("Estou escrevendo %s\n",data);
+	return ret;
+}
 
 static int minix_setattr(struct dentry *dentry, struct iattr *attr)
 {

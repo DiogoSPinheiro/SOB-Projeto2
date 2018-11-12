@@ -199,7 +199,6 @@ found:
 
 int minix_add_link(struct dentry *dentry, struct inode *inode)
 {
-	printk("Estou adicionando um link ao arquivo,acho\n\n");
 	struct inode *dir = d_inode(dentry->d_parent);
 	const char * name = dentry->d_name.name;
 	int namelen = dentry->d_name.len;
@@ -289,7 +288,6 @@ out_unlock:
 
 int minix_delete_entry(struct minix_dir_entry *de, struct page *page)
 {
-	printk("Estou deletando um link de arquivo,acho\n\n");
 	struct inode *inode = page->mapping->host;
 	char *kaddr = page_address(page);
 	loff_t pos = page_offset(page) + (char*)de - kaddr;
