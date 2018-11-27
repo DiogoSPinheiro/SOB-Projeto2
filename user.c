@@ -7,7 +7,7 @@
 
 void main(){
 
-char a[20];
+char a[100];
 char file[10],file2[10];
 int i,f;
 
